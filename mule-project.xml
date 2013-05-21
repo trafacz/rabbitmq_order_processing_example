@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<mule-project xmlns="http://www.mulesoft.com/tooling/project" runtimeId="org.mule.tooling.server.3.3.2.EE">
+    <name>rabbitmq_order_processing_example</name>
+    <description>Enhance MuleSoft Order Processing example to use RabbitMQ to forward orders to fulfillment and accounting (fanout to both).  Within fulfillment, there is a queue for each item type (direct exchange routing).&#xD;
+&#xD;
+MuleSoft original description:&#xD;
+Process an order from a web service. Split the order into individual items and route the items to corresponding manufacturers for fufillment. In addition, a contact is added to Salesforce for each processed order. A separate flow deploys a REST service that allows manufacturers to view the list of ordered items.</description>
+</mule-project>
