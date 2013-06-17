@@ -3,7 +3,7 @@
 	<classpathentry kind="lib" path="activemq-all-5.5.1.jar"/>
 	<classpathentry kind="con" path="MULE_RUNTIME"/>
 	<classpathentry kind="lib" path="derby-10.8.1.2.jar"/>
-	<classpathentry including="**/*.java" kind="src" output="target/classes" path="src/main/java">
+	<classpathentry kind="src" output="target/classes" path="src/main/java">
 		<attributes>
 			<attribute name="optional" value="true"/>
 			<attribute name="maven.pomderived" value="true"/>
@@ -15,13 +15,10 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry including="**/*.java" kind="src" path="src/main/resources"/>
+	<classpathentry including="**/*.*" kind="src" path="src/main/resources"/>
 	<classpathentry including="**/*.java" kind="src" path="src/test/resources"/>
-	<classpathentry kind="con" path="org.eclipse.m2e.MAVEN2_CLASSPATH_CONTAINER">
-		<attributes>
-			<attribute name="maven.pomderived" value="true"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="C:/Users/thadrafacz/mule-transport-amqp-3.4.0.1-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="C:/Users/thadrafacz/.m2/repository/com/rabbitmq/amqp-client/2.8.7/amqp-client-2.8.7.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

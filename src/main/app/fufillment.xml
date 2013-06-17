@@ -12,11 +12,12 @@
 	xmlns:jbossts="http://www.mulesoft.org/schema/mule/jbossts"
 	xmlns:jdbc-ee="http://www.mulesoft.org/schema/mule/ee/jdbc" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
 	xmlns:core="http://www.mulesoft.org/schema/mule/core"
-	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.3.2"
+	xmlns:spring="http://www.springframework.org/schema/beans"
 	xmlns:mulexml="http://www.mulesoft.org/schema/mule/xml" xmlns:jdbc="http://www.mulesoft.org/schema/mule/ee/jdbc"
 	xmlns:debugger="http://www.mulesoft.org/schema/mule/debugger"
 	xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:test="http://www.mulesoft.org/schema/mule/test"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="EE-3.4.0"
 	xsi:schemaLocation="
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
 http://www.mulesoft.org/schema/mule/cxf http://www.mulesoft.org/schema/mule/cxf/current/mule-cxf.xsd 
@@ -32,20 +33,34 @@ http://www.mulesoft.org/schema/mule/ee/jdbc http://www.mulesoft.org/schema/mule/
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd 
 http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd 
 http://www.mulesoft.org/schema/mule/ajax http://www.mulesoft.org/schema/mule/ajax/current/mule-ajax.xsd 
-http://www.mulesoft.org/schema/mule/amqp http://www.mulesoft.org/schema/mule/amqp/3.1/mule-amqp.xsd
+http://www.mulesoft.org/schema/mule/amqp http://www.mulesoft.org/schema/mule/amqp/current/mule-amqp.xsd
 http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/current/mule-xml.xsd 
 http://www.mulesoft.org/schema/mule/ee/jdbc http://www.mulesoft.org/schema/mule/ee/jdbc/current/mule-jdbc-ee.xsd 
 http://www.mulesoft.org/schema/mule/debugger http://www.mulesoft.org/schema/mule/debugger/current/mule-debugger.xsd 
 http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd 
-http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd ">
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd 
+http://www.mulesoft.org/schema/mule/test http://www.mulesoft.org/schema/mule/test/current/mule-test.xsd ">
 	
 	<http:connector name="HttpConnector" doc:name="HTTP\HTTPS"/>
-    <jms:activemq-xa-connector name="Active_MQ" brokerURL="vm://localhost" validateConnections="true" doc:name="Active MQ"/>
+    <jms:activemq-xa-connector name="Active_MQ" brokerURL="vm://localhost" validateConnections="true" maxRedelivery="3" doc:name="Active MQ" />
     <amqp:connector name="amqpConnector"
                 virtualHost="/"
                 username="guest"
                 password="guest"
-                activeDeclarationsOnly="true" />
+                activeDeclarationsOnly="true"
+                ackMode="MULE_AUTO" />
+	<amqp:connector name="amqpConnectorManualAck"
+                virtualHost="/"
+                username="guest"
+                password="guest"
+                prefetchCount="1"
+                ackMode="MANUAL" />
+    <amqp:connector name="mandatoryAmqpConnector"
+                virtualHost="/"
+                username="guest"
+                password="guest"
+                mandatory="true"
+                immediate="true" />
     <cxf:configuration initializeStaticBusInstance="false" doc:name="CXF Configuration" doc:description="Global CXF Configuration"/>
     <data-mapper:config name="OrderItemToOrderRequest" transformationGraphPath="orderitemtoorderrequest_1.grf" doc:name="DataMapper"/>
     <data-mapper:config name="OrderResponseToPurchaseReceipt" transformationGraphPath="orderresponsetopurchasereceipt.grf" doc:name="DataMapper"/>
@@ -68,7 +83,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
         <mulexml:namespace prefix="ord" uri="http://orders.se.mulesoft.com/"/> 
     </mulexml:namespace-manager>
     
-    <flow name="orderService" doc:name="orderService">
+    <flow name="orderService" doc:name="orderService" >
         <http:inbound-endpoint exchange-pattern="request-response" host="localhost" port="1080" path="orders" doc:name="/orders" doc:description="Process HTTP reqests or responses." connector-ref="HttpConnector"/>
         <cxf:jaxws-service serviceClass="com.mulesoft.se.orders.IProcessOrder" doc:name="Order WebService" doc:description="Make a web service available via CXF"/>
         <logger message="After cxf:jaxws-service Payload is #[message.payload]"
@@ -86,7 +101,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
                         <processor-chain>
         					<logger message="Processing inhouseOder item, Payload is #[message.payload]"
 								level="INFO" category="orderService" doc:name="Payload Logger" />
-					<!--    <jms:outbound-endpoint exchange-pattern="request-response" queue="inhouseOrder" connector-ref="Active_MQ" doc:name="Dispatch to inhouseOrder"/>-->
+<!--					    <jms:outbound-endpoint exchange-pattern="request-response" queue="inhouseOrder" connector-ref="Active_MQ" doc:name="Dispatch to inhouseOrder"/>-->
                             <amqp:outbound-endpoint exchange-pattern="request-response"
         						 queueName="inhouseOrder" connector-ref="amqpConnector" doc:name="Dispatch to inhouseOrder" />
         					<byte-array-to-object-transformer doc:name="Byte Array to Object"/>
@@ -96,7 +111,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
             </enricher>
         </foreach>
         <vm:outbound-endpoint exchange-pattern="one-way" path="backEndProcessing" doc:name="Dispatch to back-end-processing"/>
-        <vm:outbound-endpoint exchange-pattern="one-way" path="audit" responseTimeout="10000" mimeType="text/plain" doc:name="Dispatch to audit"/>
+        <vm:outbound-endpoint exchange-pattern="one-way" path="audit" doc:name="Dispatch to audit"/>
         <catch-exception-strategy doc:name="Catch Exception Strategy">
             <flow-ref name="defaultErrorHandler" doc:name="Invoke defaultErrorHandler"/>
         </catch-exception-strategy>
@@ -134,13 +149,13 @@ return receipt;]]></scripting:text>
         <http:outbound-endpoint exchange-pattern="request-response" host="localhost" port="9090" path="samsung/orders" doc:name="/samsung/orders"/>
     </sub-flow>
     
-    <flow name="inhouseOrder" doc:name="inhouseOrder">
+    <flow name="inhouseOrder" doc:name="inhouseOrder" processingStrategy="synchronous" >
 <!--        <jms:inbound-endpoint queue="inhouseOrder" connector-ref="Active_MQ" doc:name="inhouseOrder">-->
 <!--            <xa-transaction action="ALWAYS_BEGIN"/>-->
 <!--        </jms:inbound-endpoint>-->
         <amqp:inbound-endpoint queueName="inhouseOrder" connector-ref="amqpConnector" doc:name="inhouseOrder" >
-<!--            <amqp:transaction action="ALWAYS_BEGIN"/>-->
-			<xa-transaction action="ALWAYS_BEGIN"/>
+           <amqp:transaction action="ALWAYS_BEGIN" recoverStrategy="REQUEUE" />
+<!--			<xa-transaction action="ALWAYS_BEGIN"/>-->
         </amqp:inbound-endpoint>
         <byte-array-to-object-transformer doc:name="Byte Array to Object"/>
         <logger message="After amqp:inbound-endpoint Payload is #[message.payload]"
@@ -152,10 +167,12 @@ return receipt;]]></scripting:text>
                 <object-to-string-transformer doc:name="Object to String"/>
             </ee:cache>
         </enricher>
+       <test:component throwException="true" />
         <jdbc-ee:outbound-endpoint exchange-pattern="one-way" queryKey="insertOrder" queryTimeout="-1" connector-ref="JDBCConnector" doc:name="Save Order Item">
-            <xa-transaction action="JOIN_IF_POSSIBLE"/>
-            <jdbc-ee:query key="insertOrder" value="insert into orders (product_id, name, manufacturer, quantity, price2) values (#[payload.productId], #[payload.name], #[payload.manufacturer], #[payload.quantity], #[price])"/>
-        </jdbc-ee:outbound-endpoint>     
+<!--            <xa-transaction action="ALWAYS_JOIN"/>-->
+<!--            <amqp:transaction action="ALWAYS_JOIN"/>-->
+            <jdbc-ee:query key="insertOrder" value="insert into orders (product_id, name, manufacturer, quantity, price) values (#[payload.productId], #[payload.name], #[payload.manufacturer], #[payload.quantity], #[price])"/>
+        </jdbc-ee:outbound-endpoint>
         <set-variable variableName="totalPrice" value="#[price * payload.quantity]" doc:name="totalPrice = price * payload.quantity"/>
         <set-session-variable variableName="totalValue" value="#[totalValue + totalPrice]" doc:name="totalValue += totalPrice"/>
         <scripting:transformer doc:name="Groovy">
@@ -170,13 +187,16 @@ return receipt;]]></scripting:text>
             <logger message="After rollback-exception-strategy Payload is #[message.payload]"
 				level="INFO" category="inhouseOrder" doc:name="Payload Logger" />
             <on-redelivery-attempts-exceeded doc:name="Redelivery exhausted">
+                <logger message="After on-redelivery-attempts-exceeded Payload is #[message.payload]"
+					level="INFO" category="inhouseOrder" doc:name="Payload Logger" />
                 <flow-ref name="defaultErrorHandler" doc:name="Invoke defaultErrorHandler"/>
             </on-redelivery-attempts-exceeded>
         </rollback-exception-strategy>
     </flow>
     
     <flow name="backEndProcessingFlow" doc:name="backEndProcessingFlow">
-    	<vm:inbound-endpoint exchange-pattern="one-way" path="backEndProcessing" responseTimeout="10000" mimeType="text/plain" doc:name="audit" />
+    	<vm:inbound-endpoint exchange-pattern="one-way" path="backEndProcessing"
+    		responseTimeout="10000" mimeType="text/plain" doc:name="backEndProcessing" />
         <logger message="In backEndProcessingFlow, orderId is #[payload.orderId]"
 			level="INFO" category="backEndProcessingFlow" doc:name="Payload Logger" />
         <amqp:outbound-endpoint exchangeName="back-end-processing"
@@ -191,48 +211,111 @@ return receipt;]]></scripting:text>
     	<amqp:inbound-endpoint exchangeName="back-end-processing" queueName="fullfilment"
     		exchangeType="fanout" exchangeAutoDelete="false" exchangeDurable="true"
 			queueDurable="true" queueExclusive="false" queueAutoDelete="false"
-    		connector-ref="amqpConnector" doc:name="back-end-processing fullfilment queue" />
+    		exchange-pattern="one-way" connector-ref="amqpConnectorManualAck" doc:name="back-end-processing fullfilment queue" />
 		<byte-array-to-object-transformer doc:name="Byte Array to Object"/>
 		<logger message="Received order in back-end-processing fullfilment, orderId is #[payload.orderId]"
 			level="INFO" category="fullfilment" doc:name="Payload Logger" />
 
+<!--        <test:component throwException="true" /> -->
+
 		<foreach collection="#[payload.orderItems]" doc:name="For each Order Item">
-                <choice doc:name="Choice">
-                    <when expression="#[payload.manufacturer == 'Samsung']">
-                        <processor-chain>
-                            <logger message="Processing Samsung item, Payload is #[message.payload]"
-								level="INFO" category="fullfilment" doc:name="Payload Logger" />
-                        </processor-chain>
-                    </when>
-                    <otherwise>
-                        <processor-chain>
-        					<logger message="Processing inhouseOder item, Payload is #[message.payload]"
-								level="INFO" category="fullfilment" doc:name="Payload Logger" />
-                            
-                        </processor-chain>
-                    </otherwise>
-                </choice>
+            <choice doc:name="Skip Samsung items">
+                <when expression="#[payload.manufacturer == 'Samsung']">
+                    <processor-chain>
+                        <logger message="Skipping Samsung item, Payload is #[message.payload]"
+							level="INFO" category="fullfilment" doc:name="Payload Logger" />
+                    </processor-chain>
+                </when>
+                <otherwise>
+                    <processor-chain>
+        				<logger message="Fullfilling inhouseOder item, Payload is #[message.payload]"
+							level="INFO" category="fullfilment" doc:name="Payload Logger" />
+                        <enricher target="#[flowVars['inventoryCount']]" doc:name="Enrich with price">
+                        	<flow-ref name="getInventoryCountFlow" doc:name="getInventoryCountFlow"/>
+                        </enricher>
+                        <choice doc:name="Check if we have inventory">
+							<when expression="#[flowVars['inventoryCount'] &gt; 0]">
+								<logger message="positive inventory level, ProductID is #[payload.productId]"
+									level="INFO" category="fullfilment" doc:name="Payload Logger" />
+<!-- 							<test:component throwException="true" /> -->
+								<amqp:outbound-endpoint queueName="shippedItems" connector-ref="amqpConnector"
+        							exchange-pattern="one-way" doc:name="Forward to shippedItems" />
+							</when>
+							<otherwise>
+                                <processor-chain>
+                                    <logger message="0 inventory level, ProductID is #[payload.productId]" level="INFO" category="fullfilment" doc:name="Payload Logger"/>
+                                    <amqp:return-handler>
+                                    	<vm:outbound-endpoint exchange-pattern="one-way" path="noBackOrders" doc:name="Forward to noBackOrders" />
+                                    </amqp:return-handler>
+                                    <set-property propertyName="routing-key" value="#[payload.productId]"/>
+                                    <amqp:outbound-endpoint exchangeName="backOrders" routingKey="invalidProduct"
+        								exchange-pattern="one-way" connector-ref="mandatoryAmqpConnector" doc:name="Forward to backOrders" />
+                                </processor-chain>
+							</otherwise>
+						</choice>
+                   	 </processor-chain>
+                </otherwise>
+            </choice>
         </foreach>
-        <amqp:outbound-endpoint queueName="statusUpdates" connector-ref="amqpConnector" doc:name="Forward fulfillment status"/>
+		<amqp:acknowledge-message />
+        <catch-exception-strategy doc:name="Catch Exception Strategy">
+        	<logger message="After catch-exception-strategy Payload is #[message.payload]"
+				level="INFO" category="fullfilmentFlow" doc:name="Payload Logger" />
+			<amqp:reject-message requeue="true" />
+        </catch-exception-strategy>
+    </flow>
+    
+    <sub-flow name="getInventoryCountFlow" doc:name="getInventoryCountFlow">
+		<choice doc:name="Determine inventory count">
+			<when expression="#[(payload.quantity % 2) == 0]">
+                <processor-chain>
+                    <logger message="positive inventory level, ProductID is #[payload.productId]" level="INFO" category="getInventoryCountFlow" doc:name="Payload Logger"/>
+                    <set-payload value="5" doc:name="positive inventory level"/>
+                </processor-chain>
+			</when>
+			<otherwise>
+                <processor-chain>
+                    <logger message="0 inventory level, ProductID is #[payload.productId]" level="INFO" category="getInventoryCountFlow" doc:name="Payload Logger"/>
+                    <set-payload value="0" doc:name="0 inventory level"/>
+                </processor-chain>
+			</otherwise>
+		</choice>
+	</sub-flow>
+    
+    <flow name="backOrders-b210Flow" doc:name="backOrders Flow">
+    	<amqp:inbound-endpoint exchangeName="backOrders" routingKey="b210"
+    		exchange-pattern="one-way" connector-ref="amqpConnector" doc:name="backOrders exchange">
+    	</amqp:inbound-endpoint>
+    	<byte-array-to-object-transformer doc:name="Byte Array to Object"/>
+    	<logger message="Received order item in backOrders:  ProductId = #[payload.productId], Quantity = #[payload.quantity]"
+			level="INFO" category="backOrders-b210" doc:name="Payload Logger" />
+    </flow>
+    
+    <flow name="noBackOrdersFlow" doc:name="noBackOrders Flow">
+    	<vm:inbound-endpoint exchange-pattern="one-way" path="noBackOrders" doc:name="noBackOrders" />
+    	<byte-array-to-object-transformer doc:name="Byte Array to Object"/>
+    	<logger message="Received order item in noBackOrders:  ProductId = #[payload.productId], Quantity = #[payload.quantity]"
+			level="INFO" category="noBackOrders" doc:name="Payload Logger" />
+    </flow>
+    
+    <flow name="shippedItemsFlow" doc:name="shippedItems Flow">
+    	<amqp:inbound-endpoint queueName="shippedItems" connector-ref="amqpConnector"
+    		exchange-pattern="one-way" doc:name="shippedItems exchange">
+    	</amqp:inbound-endpoint>
+    	<byte-array-to-object-transformer doc:name="Byte Array to Object"/>
+    	<logger message="Received order item in shippedItems:  ProductId = #[payload.productId], Quantity = #[payload.quantity]"
+			level="INFO" category="shippedItems" doc:name="Payload Logger" />
     </flow>
     
     <flow name="accountingFlow" doc:name="accountingFlow">
     	<amqp:inbound-endpoint exchangeName="back-end-processing" queueName="accounting"
     		exchangeType="fanout" exchangeAutoDelete="false" exchangeDurable="true"
 			queueDurable="true" queueExclusive="false" queueAutoDelete="false"
-    		connector-ref="amqpConnector" doc:name="back-end-processing accounting queue" />
+    		exchange-pattern="one-way" connector-ref="amqpConnector" doc:name="back-end-processing accounting queue" />
 		<byte-array-to-object-transformer doc:name="Byte Array to Object"/>
 		<logger message="Received order in back-end-processing accounting, orderId is #[payload.orderId]"
 			level="INFO" category="accounting" doc:name="Payload Logger" />
 			
-    </flow>
-    
-    <flow name="statusUpdates" doc:name="statusUpdates">
-    	<amqp:inbound-endpoint queueName="statusUpdates" connector-ref="amqpConnector" doc:name="statusUpdates queue">
-    		</amqp:inbound-endpoint>
-    	<byte-array-to-object-transformer doc:name="Byte Array to Object"/>
-    	<logger message="Received order in statusUpdates, Payload is #[message.payload]"
-			level="INFO" category="statusUpdates" doc:name="Payload Logger" />
     </flow>
     
     <flow name="auditService" doc:name="auditService">

@@ -33,7 +33,7 @@
 		<dependency>
 			<groupId>org.mule.transports</groupId>
 			<artifactId>mule-transport-amqp</artifactId>
-			<version>3.3.0</version>
+			<version>3.4.0.1-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
 	<repositories>
